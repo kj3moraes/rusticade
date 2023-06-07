@@ -1,6 +1,6 @@
 # rusticade
 
-A terminal-based arcade. Play games like
+A fullterminal-based arcade. Play games like
 
 - Space Invaders
 - Breakout
