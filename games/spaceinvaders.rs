@@ -153,7 +153,7 @@ impl GameState {
 
 fn main() {
     let mut app = App::default();
-    let mut state = GameState::new(Vec2::xy(60, 22));
+    let mut state = GameState::new(Vec2::xy(50, 22));
     let mut fps_counter = FPSCounter::default();
 
     app.run(|app_state: &mut State, window: &mut Window| {
@@ -167,8 +167,8 @@ fn main() {
 
         for key_down in app_state.keyboard().get_keys_down() {
             match key_down {
-                Key::A | Key::H => state.spaceship_move_x(-1),
-                Key::D | Key::L => state.spaceship_move_x(1),
+                Key::A | Key::H => state.spaceship_move_x(-5),
+                Key::D | Key::L => state.spaceship_move_x(5),
                 Key::Space => state.spaceship_shot(app_state.step()),
                 _ => (),
             }
