@@ -64,8 +64,7 @@ struct GameState {
     pub dimension: Vec2,
     pub bouncer: PlayerState,
     pub last_shot_frame: usize,
-    pub bricks: Vec<Vec2>,
-    pub bricks_shots: Vec<Vec2>,
+    pub bricks: Vec<BrickState>,
     pub ball_movement: (i32, bool),
     pub last_ball_movement: usize,
     pub last_bricks_shots: usize,
@@ -80,7 +79,7 @@ impl GameState {
         for y in 2..10 {
             for x in 5..dimension.x - 10 {
                 if x % 2 != 0 {
-                    bricks.push(Vec2::xy(x, y));
+                    bricks.push(BrickState::new(Vec2::xy(x, y)));
                 }
             }
         }
@@ -94,7 +93,6 @@ impl GameState {
             },
             last_shot_frame: 0,
             bricks: bricks,
-            bricks_shots: Vec::new(),
             ball_movement: (1, false),
             last_ball_movement: 0,
             last_bricks_shots: 0,
@@ -165,7 +163,7 @@ fn main() {
         for bricks in &state.bricks {
             pencil.set_foreground(Color::LightGrey);
             pencil.draw_rect(&RectCharset::simple_round_lines(), 
-                            *bricks, 
+                            (*bricks).position, 
                             Vec2::xy(state.dimension.x / 10, 4));
         }
         
