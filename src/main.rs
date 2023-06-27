@@ -7,6 +7,12 @@ use ruscii::terminal::{Color, Style, Window};
 
 use rand::{self, prelude::*};
 
+/*
+    PlayerState defines the state of the player's bouncer. 
+    - its current position
+    - which direction it is moving
+    - how many shots it has missed
+*/
 struct PlayerState {
     pub position: Vec2,
     pub direction: i32,
@@ -31,6 +37,28 @@ impl PlayerState {
     }
 }
 
+/*
+    BrickState defines the state of a brick. 
+    - its current position
+    - whether it is alive or not
+*/
+struct BrickState {
+    pub position: Vec2,
+    pub alive: bool,
+}
+
+impl BrickState {
+    pub fn new(position: Vec2) -> BrickState {
+        BrickState {
+            position,
+            alive: true,
+        }
+    }
+
+    pub fn kill(&mut self) {
+        self.alive = false;
+    }
+}
 
 struct GameState {
     pub dimension: Vec2,
@@ -50,7 +78,7 @@ impl GameState {
     pub fn new(dimension: Vec2) -> GameState {
         let mut bricks = Vec::new();
         for y in 2..10 {
-            for x in 5..dimension.x - 5 {
+            for x in 5..dimension.x - 10 {
                 if x % 2 != 0 {
                     bricks.push(Vec2::xy(x, y));
                 }
@@ -94,10 +122,13 @@ impl GameState {
 fn main() {
     let mut app = App::default();
     let win_size = app.window().size();
-    let mut state = GameState::new((win_size * 4) / 5);
+    
+    let gameplay_dimensions = Vec2::xy(win_size.x * 3/4, win_size.y * 3/4);
+    let mut state = GameState::new(gameplay_dimensions);
 
     app.run(|app_state: &mut State, window: &mut Window| {
         
+        // Quit the game if the user presses the ESC key or Q.
         for key_event in app_state.keyboard().last_key_events() {
             match key_event {
                 KeyEvent::Pressed(Key::Esc) => app_state.stop(),
@@ -106,7 +137,10 @@ fn main() {
             }
         }
 
+        // Define the pencil
         let mut pencil = Pencil::new(window.canvas_mut());
+        
+        // Register the movement of the bouncer
         for key_down in app_state.keyboard().get_keys_down() {
             let relative_speed = win_size.x / 50;
             let b = state.bouncer.position.x.to_string();
@@ -118,8 +152,10 @@ fn main() {
                 _ => (),
             }
         }
-
+        
         state.update();
+
+        // Draw the bouncer
         pencil.set_origin((win_size - state.dimension) / 2);
         pencil.set_foreground(Color::Red);
         pencil.draw_rect(&RectCharset::double_lines(), 
@@ -127,10 +163,10 @@ fn main() {
                         Vec2::xy(state.dimension.x / 10, 2));
 
         for bricks in &state.bricks {
-            pencil.set_foreground(Color::Blue);
+            pencil.set_foreground(Color::LightGrey);
             pencil.draw_rect(&RectCharset::simple_round_lines(), 
                             *bricks, 
-                            Vec2::xy(state.dimension.x / 10, 2));
+                            Vec2::xy(state.dimension.x / 10, 4));
         }
         
     });
