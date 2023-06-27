@@ -129,8 +129,8 @@ fn main() {
             match key_down {
                 Key::W => state.left_player.direction = -1,
                 Key::S => state.left_player.direction = 1,
-                Key::O => state.right_player.direction = -1,
-                Key::L => state.right_player.direction = 1,
+                Key::Up => state.right_player.direction = -1,
+                Key::Down => state.right_player.direction = 1,
                 _ => (),
             }
         }
