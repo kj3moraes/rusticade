@@ -75,9 +75,11 @@ struct GameState {
 impl GameState {
 
     pub fn new(dimension: Vec2) -> GameState {
+
+        // Create the bricks relative to the size of the window
         let mut bricks = Vec::new();
-        for y in 2..10 {
-            for x in 5..dimension.x - 10 {
+        for y in (1..=16).step_by(2) {
+            for x in (3..60).step_by(4) {
                 if x % 2 != 0 {
                     bricks.push(BrickState::new(Vec2::xy(x, y)));
                 }
@@ -87,7 +89,7 @@ impl GameState {
         GameState {
             dimension,
             bouncer: PlayerState { 
-                position: Vec2::xy(1, dimension.y),
+                position: Vec2::xy(1, dimension.y - 2),
                 direction: 0,
                 misses: 0,
             },
@@ -101,8 +103,8 @@ impl GameState {
     }
 
     pub fn bouncer_move_x(&mut self, direction: i32) {
-        if (self.bouncer.position.x < 0 && direction < 0) 
-            || (self.bouncer.position.x > self.dimension.x && direction > 0) {
+        if (self.bouncer.position.x - 3 < 0 && direction < 0) 
+            || (self.bouncer.position.x + 3 > self.dimension.x && direction > 0) {
             self.bouncer.direction = 0;
         } else {
             self.bouncer.move_x(direction);
@@ -121,7 +123,7 @@ fn main() {
     let mut app = App::default();
     let win_size = app.window().size();
     
-    let gameplay_dimensions = Vec2::xy(win_size.x * 3/4, win_size.y * 3/4);
+    let gameplay_dimensions = Vec2::xy(win_size.x * 3/4, win_size.y);
     let mut state = GameState::new(gameplay_dimensions);
 
     app.run(|app_state: &mut State, window: &mut Window| {
@@ -160,11 +162,24 @@ fn main() {
                         state.bouncer.position, 
                         Vec2::xy(state.dimension.x / 10, 2));
 
-        for bricks in &state.bricks {
-            pencil.set_foreground(Color::LightGrey);
-            pencil.draw_rect(&RectCharset::simple_round_lines(), 
+        for (i, bricks) in state.bricks.iter().enumerate() {
+
+            // Based on the row, change the colour of the bricks
+            if i / 10 < 1 || i / 10 < 2 {
+                pencil.set_foreground(Color::Red);
+            } else if i / 10 < 3 || i / 10 < 4{
+                pencil.set_foreground(Color::Xterm(130));
+            } else if i / 10 < 5 {
+                pencil.set_foreground(Color::Yellow);
+            } else if i / 10 < 6 {
+                pencil.set_foreground(Color::Green);
+            } else {
+                pencil.set_foreground(Color::LightGrey);
+            }
+            // pencil.set_foreground(Color::LightGrey);
+            pencil.draw_rect(&RectCharset::simple_lines(), 
                             (*bricks).position, 
-                            Vec2::xy(state.dimension.x / 10, 4));
+                            Vec2::xy(8, 2));
         }
         
     });
