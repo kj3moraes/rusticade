@@ -28,12 +28,43 @@ impl PlayerState {
         }
     }
 
-    pub fn move_x(&mut self, direction: i32) {
-        self.direction = direction;
+    pub fn move_x(&mut self) {
         if self.position.x > 0 && self.position.x < 10 {
-            self.position.x += direction;
+            self.position.x += self.direction;
         }
-        self.position.x += direction;
+        self.position.x += self.direction;
+    }
+}
+
+/**
+ * BallState defines the state of the ball.
+ * - its current position
+ * - its current direction
+ */
+struct BallState {
+    pub position: Vec2,
+    pub direction: Vec2,
+}
+
+impl BallState {
+    pub fn new(position: Vec2) -> BallState {
+        BallState {
+            position,
+            direction: Vec2::xy(1, -1),
+        }
+    }
+
+    pub fn move_ball(&mut self) {
+        self.position.x += self.direction.x;
+        self.position.y += self.direction.y;
+    }
+
+    pub fn bounce_x(&mut self) {
+        self.direction.x *= -1;
+    }
+
+    pub fn bounce_y(&mut self) {
+        self.direction.y *= -1;
     }
 }
 
@@ -65,7 +96,7 @@ struct GameState {
     pub bouncer: PlayerState,
     pub last_shot_frame: usize,
     pub bricks: Vec<BrickState>,
-    pub ball_movement: (i32, bool),
+    pub ball: BallState,
     pub last_ball_movement: usize,
     pub last_bricks_shots: usize,
     pub score: usize,
@@ -79,7 +110,7 @@ impl GameState {
         // Create the bricks relative to the size of the window
         let mut bricks = Vec::new();
         for y in (1..=16).step_by(2) {
-            for x in (3..60).step_by(4) {
+            for x in (3.. dimension.x - 6).step_by(3) {
                 if x % 2 != 0 {
                     bricks.push(BrickState::new(Vec2::xy(x, y)));
                 }
@@ -89,13 +120,13 @@ impl GameState {
         GameState {
             dimension,
             bouncer: PlayerState { 
-                position: Vec2::xy(1, dimension.y - 2),
+                position: Vec2::xy(dimension.x / 2, dimension.y - 2),
                 direction: 0,
                 misses: 0,
             },
             last_shot_frame: 0,
             bricks: bricks,
-            ball_movement: (1, false),
+            ball: BallState::new(Vec2::xy(dimension.x / 2, dimension.y / 2)),
             last_ball_movement: 0,
             last_bricks_shots: 0,
             score: 0,
@@ -107,12 +138,42 @@ impl GameState {
             || (self.bouncer.position.x + 3 > self.dimension.x && direction > 0) {
             self.bouncer.direction = 0;
         } else {
-            self.bouncer.move_x(direction);
+            self.bouncer.direction = direction;
         }
     }
 
     pub fn update(&mut self) {
-        self.score += 12;
+
+        // Move the bouncer
+        self.bouncer.move_x();
+        self.bouncer.direction = 0;
+    
+        // Move the ball
+        // 1. Ensure that the ball is within bounds
+        if self.ball.position.x <= 1 || self.ball.position.x > self.dimension.x - 1 {
+            self.ball.bounce_x();
+        } else if (self.ball.position.y <= 1) {
+            self.ball.bounce_y();
+        }
+        self.ball.move_ball();
+
+
+        // 2. Check if the ball hits the bouncer
+        if (self.ball.position.y < self.bouncer.position.y - 1) 
+            && (self.ball.position.y >= self.bouncer.position.y - 2) 
+            && (self.ball.position.x >= self.bouncer.position.x - 2 
+                || self.ball.position.x <= self.bouncer.position.x + 2){
+            self.ball.bounce_y();
+        }
+
+        // 3. Check if the ball hits a brick
+        for brick in self.bricks.iter_mut() {
+            if brick.alive && self.ball.position == brick.position {
+                brick.kill();
+                self.ball.bounce_y();
+                self.score += 5;
+            }
+        }
     }
 
   
@@ -153,7 +214,7 @@ fn main() {
             }
         }
         
-        state.update();
+        state.update();     
 
         // Draw the bouncer
         pencil.set_origin((win_size - state.dimension) / 2);
@@ -161,7 +222,21 @@ fn main() {
         pencil.draw_rect(&RectCharset::double_lines(), 
                         state.bouncer.position, 
                         Vec2::xy(state.dimension.x / 10, 2));
+        
 
+        // Draw the ball
+        if state.ball.position.y > state.dimension.y + 10{
+            let msg = &format!("{}  -  score: {}", "dead", state.score);
+            pencil.set_origin(win_size / 2 - Vec2::x(msg.len() / 2));
+            pencil.draw_text(msg, Vec2::zero());
+            return;
+        }
+        pencil.set_foreground(Color::Blue);
+        pencil.draw_rect(&RectCharset::simple_lines(), 
+                        state.ball.position, 
+                        Vec2::xy(2, 2));
+
+        // Draw the bricks
         for (i, bricks) in state.bricks.iter().enumerate() {
 
             // Based on the row, change the colour of the bricks
@@ -179,8 +254,9 @@ fn main() {
             // pencil.set_foreground(Color::LightGrey);
             pencil.draw_rect(&RectCharset::simple_lines(), 
                             (*bricks).position, 
-                            Vec2::xy(8, 2));
+                            Vec2::xy(6, 2));
         }
-        
+
+       
     });
 }
