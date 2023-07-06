@@ -1,11 +1,9 @@
 use ruscii::app::{App, State};
 use ruscii::drawing::{Pencil, RectCharset};
-use ruscii::gui::FPSCounter;
 use ruscii::keyboard::{Key, KeyEvent};
 use ruscii::spatial::Vec2;
-use ruscii::terminal::{Color, Style, Window};
-
-use rand::{self, prelude::*};
+use ruscii::terminal::{Color, Window, Style};
+use array2d::Array2D;
 
 /*
     PlayerState defines the state of the player's bouncer. 
@@ -73,6 +71,8 @@ impl BallState {
     - its current position
     - whether it is alive or not
 */
+
+#[derive(Clone)]
 struct BrickState {
     pub position: Vec2,
     pub alive: bool,
@@ -89,16 +89,20 @@ impl BrickState {
     pub fn kill(&mut self) {
         self.alive = false;
     }
+
+    pub fn clone(&self) -> BrickState {
+        BrickState {
+            position: self.position,
+            alive: self.alive,
+        }
+    }
 }
 
 struct GameState {
     pub dimension: Vec2,
     pub bouncer: PlayerState,
-    pub last_shot_frame: usize,
-    pub bricks: Vec<BrickState>,
+    pub bricks: Array2D<BrickState>>,
     pub ball: BallState,
-    pub last_ball_movement: usize,
-    pub last_bricks_shots: usize,
     pub score: usize,
 }
 
@@ -108,11 +112,11 @@ impl GameState {
     pub fn new(dimension: Vec2) -> GameState {
 
         // Create the bricks relative to the size of the window
-        let mut bricks = Vec::new();
+        let mut bricks = Array2D::filled_with(BrickState::new(Vec2::xy(0, 0)), 10, 8);
         for y in (1..=16).step_by(2) {
             for x in (3.. dimension.x - 6).step_by(3) {
                 if x % 2 != 0 {
-                    bricks.push(BrickState::new(Vec2::xy(x, y)));
+                    bricks.get(x, y / 2);
                 }
             }
         }
@@ -124,11 +128,8 @@ impl GameState {
                 direction: 0,
                 misses: 0,
             },
-            last_shot_frame: 0,
             bricks: bricks,
             ball: BallState::new(Vec2::xy(dimension.x / 2, dimension.y / 2)),
-            last_ball_movement: 0,
-            last_bricks_shots: 0,
             score: 0,
         }
     }
@@ -237,6 +238,7 @@ fn main() {
                         Vec2::xy(2, 2));
 
         // Draw the bricks
+        pencil.set_style(style::Style::default().background(Color::Black));
         for (i, bricks) in state.bricks.iter().enumerate() {
 
             // Based on the row, change the colour of the bricks
