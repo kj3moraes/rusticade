@@ -101,7 +101,7 @@ impl BrickState {
 struct GameState {
     pub dimension: Vec2,
     pub bouncer: PlayerState,
-    pub bricks: Array2D<BrickState>>,
+    pub bricks: Array2D<BrickState>,
     pub ball: BallState,
     pub score: usize,
 }
@@ -112,12 +112,12 @@ impl GameState {
     pub fn new(dimension: Vec2) -> GameState {
 
         // Create the bricks relative to the size of the window
-        let mut bricks = Array2D::filled_with(BrickState::new(Vec2::xy(0, 0)), 10, 8);
+        let mut bricks = Array2D::filled_with(BrickState::new(Vec2::xy(0, 0)),
+                                                                    10,
+                                                                    8);
         for y in (1..=16).step_by(2) {
-            for x in (3.. dimension.x - 6).step_by(3) {
-                if x % 2 != 0 {
-                    bricks.get(x, y / 2);
-                }
+            for x in (1..=30).step_by(3) {
+                bricks[(x / 3, y / 2)] = BrickState::new(Vec2::xy(x, y));
             }
         }
 
@@ -142,6 +142,7 @@ impl GameState {
             self.bouncer.direction = direction;
         }
     }
+
 
     pub fn update(&mut self) {
 
@@ -168,14 +169,16 @@ impl GameState {
         }
 
         // 3. Check if the ball hits a brick
-        for brick in self.bricks.iter_mut() {
-            if brick.alive && self.ball.position == brick.position {
-                brick.kill();
-                self.ball.bounce_y();
-                self.score += 5;
+        for mut row in self.bricks.as_rows() {
+            for mut brick in row {
+                if brick.alive && self.ball.position.x == brick.position.x && self.ball.position.y == brick.position.y {
+                    self.ball.bounce_y();
+                    brick.kill();
+                    self.score += 1;
+                }
             }
         }
-    }
+     }
 
   
 }
@@ -238,25 +241,15 @@ fn main() {
                         Vec2::xy(2, 2));
 
         // Draw the bricks
-        pencil.set_style(style::Style::default().background(Color::Black));
-        for (i, bricks) in state.bricks.iter().enumerate() {
-
-            // Based on the row, change the colour of the bricks
-            if i / 10 < 1 || i / 10 < 2 {
-                pencil.set_foreground(Color::Red);
-            } else if i / 10 < 3 || i / 10 < 4{
-                pencil.set_foreground(Color::Xterm(130));
-            } else if i / 10 < 5 {
-                pencil.set_foreground(Color::Yellow);
-            } else if i / 10 < 6 {
-                pencil.set_foreground(Color::Green);
-            } else {
-                pencil.set_foreground(Color::LightGrey);
+        // pencil.set_style(style::Style::default().background(Color::Black));
+        for row in state.bricks.as_rows() {
+            for brick in row {
+                if brick.alive { 
+                    pencil.draw_rect(&RectCharset::simple_lines(), 
+                                    brick.position, 
+                                    Vec2::xy(2, 2));
+                }   
             }
-            // pencil.set_foreground(Color::LightGrey);
-            pencil.draw_rect(&RectCharset::simple_lines(), 
-                            (*bricks).position, 
-                            Vec2::xy(6, 2));
         }
 
        
