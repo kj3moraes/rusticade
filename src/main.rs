@@ -123,17 +123,13 @@ impl GameState {
 
         GameState {
             dimension,
-            bouncer: PlayerState { 
-                position: Vec2::xy(dimension.x / 2, dimension.y - 2),
-                direction: 0,
-                misses: 0,
-            },
+            bouncer: PlayerState::new(Vec2::xy(dimension.x / 2, dimension.y - 2)),
             bricks: bricks,
             ball: BallState::new(Vec2::xy(dimension.x / 2, dimension.y / 2)),
             score: 0,
         }
     }
-
+    
     pub fn bouncer_move_x(&mut self, direction: i32) {
         if (self.bouncer.position.x - 3 < 0 && direction < 0) 
             || (self.bouncer.position.x + 3 > self.dimension.x && direction > 0) {
@@ -154,17 +150,15 @@ impl GameState {
         // 1. Ensure that the ball is within bounds
         if self.ball.position.x <= 1 || self.ball.position.x > self.dimension.x - 1 {
             self.ball.bounce_x();
-        } else if (self.ball.position.y <= 1) {
+        } else if self.ball.position.y <= 1 {
             self.ball.bounce_y();
         }
+
         self.ball.move_ball();
 
-
         // 2. Check if the ball hits the bouncer
-        if (self.ball.position.y < self.bouncer.position.y - 1) 
-            && (self.ball.position.y >= self.bouncer.position.y - 2) 
-            && (self.ball.position.x >= self.bouncer.position.x - 2 
-                || self.ball.position.x <= self.bouncer.position.x + 2){
+        if (self.ball.position.y < self.bouncer.position.y - 1 && self.ball.position.y >= self.bouncer.position.y - 2) 
+            && (self.ball.position.x >= self.bouncer.position.x - self.dimension.x / 10 && self.ball.position.x <= self.bouncer.position.x + self.dimension.x / 10) {
             self.ball.bounce_y();
         }
 
@@ -235,7 +229,7 @@ fn main() {
             pencil.draw_text(msg, Vec2::zero());
             return;
         }
-        pencil.set_foreground(Color::Blue);
+        pencil.set_foreground(Color::Yellow);
         pencil.draw_rect(&RectCharset::simple_lines(), 
                         state.ball.position, 
                         Vec2::xy(2, 2));
