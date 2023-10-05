@@ -48,7 +48,7 @@ impl BallState {
     pub fn new(position: Vec2) -> BallState {
         BallState {
             position,
-            direction: Vec2::xy(1, -1),
+            direction: Vec2::xy( 1 , -1),
         }
     }
 
@@ -202,8 +202,8 @@ fn main() {
         // Register the movement of the bouncer
         for key_down in app_state.keyboard().get_keys_down() {
             let relative_speed = win_size.x / 50;
-            let b = state.bouncer.position.x.to_string();
-            pencil.draw_text(&b, Vec2 { x: 0, y: 0 });
+            
+            
             match key_down {
                 // TODO: The speed has to be relative to the window size.
                 Key::A | Key::J => state.bouncer_move_x(-relative_speed),
@@ -213,6 +213,9 @@ fn main() {
         }
         
         state.update();     
+
+        // Draw the score
+        pencil.draw_text(&state.score.to_string(), Vec2 { x: 0, y: 0 });
 
         // Draw the bouncer
         pencil.set_origin((win_size - state.dimension) / 2);
