@@ -1,9 +1,14 @@
+use std::char::MAX;
+
 use ruscii::app::{App, State};
 use ruscii::drawing::{Pencil, RectCharset};
 use ruscii::keyboard::{Key, KeyEvent};
 use ruscii::spatial::Vec2;
 use ruscii::terminal::{Color, Window, Style};
 use array2d::Array2D;
+
+
+const MAX_MISSES : usize = 3;
 
 /*
     PlayerState defines the state of the player's bouncer. 
@@ -39,16 +44,20 @@ impl PlayerState {
  * - its current position
  * - its current direction
  */
+#[derive(Clone, Debug)]
 struct BallState {
     pub position: Vec2,
     pub direction: Vec2,
+    initial_position: Vec2
 }
+
 
 impl BallState {
     pub fn new(position: Vec2) -> BallState {
         BallState {
             position,
             direction: Vec2::xy( 1 , -1),
+            initial_position: position
         }
     }
 
@@ -63,6 +72,11 @@ impl BallState {
 
     pub fn bounce_y(&mut self) {
         self.direction.y *= -1;
+    }
+
+    pub fn reset(&mut self) {
+        self.position = self.initial_position.clone();
+        self.direction = Vec2::xy( 1 , -1); 
     }
 }
 
@@ -88,13 +102,6 @@ impl BrickState {
 
     pub fn kill(&mut self) {
         self.alive = false;
-    }
-
-    pub fn clone(&self) -> BrickState {
-        BrickState {
-            position: self.position,
-            alive: self.alive,
-        }
     }
 }
 
@@ -163,7 +170,7 @@ impl GameState {
         }
 
         // 3. Check if the ball hits a brick
-        for mut row in self.bricks.as_rows() {
+        for row in self.bricks.as_rows() {
             for mut brick in row {
                 if brick.alive && self.ball.position.x == brick.position.x && self.ball.position.y == brick.position.y {
                     self.ball.bounce_y();
@@ -181,12 +188,13 @@ impl GameState {
 fn main() {
     let mut app = App::default();
     let win_size = app.window().size();
-    
     let gameplay_dimensions = Vec2::xy(win_size.x * 3/4, win_size.y);
     let mut state = GameState::new(gameplay_dimensions);
-
+    
+    let mut is_game_over : bool = false;
+    
     app.run(|app_state: &mut State, window: &mut Window| {
-        
+
         // Quit the game if the user presses the ESC key or Q.
         for key_event in app_state.keyboard().last_key_events() {
             match key_event {
@@ -203,19 +211,25 @@ fn main() {
         for key_down in app_state.keyboard().get_keys_down() {
             let relative_speed = win_size.x / 50;
             
-            
             match key_down {
                 // TODO: The speed has to be relative to the window size.
-                Key::A | Key::J => state.bouncer_move_x(-relative_speed),
-                Key::D | Key::L =>  state.bouncer_move_x(relative_speed),
+                Key::A | Key::J | Key::Left     => state.bouncer_move_x(-relative_speed),
+                Key::D | Key::L | Key::Right    =>  state.bouncer_move_x(relative_speed),
                 _ => (),
             }
         }
-        
         state.update();     
 
         // Draw the score
-        pencil.draw_text(&state.score.to_string(), Vec2 { x: 0, y: 0 });
+        pencil.set_foreground(Color::Green);
+        let mut display_text = "score: ".to_owned() + &state.score.to_string().to_owned();
+        pencil.draw_text(&display_text, Vec2 { x: 0, y: 0 });
+        
+        // Draw the misses 
+        pencil.set_foreground(Color::Red);
+        display_text = "misses: ".to_owned() + &state.bouncer.misses.to_string().to_owned();
+        pencil.draw_text(&display_text,
+                         Vec2 { x: state.dimension.x, y: 0 });
 
         // Draw the bouncer
         pencil.set_origin((win_size - state.dimension) / 2);
@@ -224,14 +238,39 @@ fn main() {
                         state.bouncer.position, 
                         Vec2::xy(state.dimension.x / 10, 2));
         
+        // Check that the ball is within bounds 
+        // (if it is not then decrease the number of lives left)
+        if state.ball.position.y > state.dimension.y + 10 {
+            state.bouncer.misses += 1;
 
-        // Draw the ball
-        if state.ball.position.y > state.dimension.y + 10{
+            // Have we run out of lives ?
+            if state.bouncer.misses == MAX_MISSES {
+                is_game_over = true;
+            } else {
+                // Else, reset the ball at the starting position 
+                state.ball.reset();
+                pencil.set_foreground(Color::Yellow);
+                pencil.draw_rect(&RectCharset::simple_lines(), 
+                                state.ball.position, 
+                                Vec2::xy(2, 2));
+                // Draw the bouncer
+                pencil.set_origin((win_size - state.dimension) / 2);
+                pencil.set_foreground(Color::Red);
+                pencil.draw_rect(&RectCharset::double_lines(), 
+                                state.bouncer.position, 
+                                Vec2::xy(state.dimension.x / 10, 2));
+            }
+        }
+        
+        // If the game is over, print the score and exit.
+        if is_game_over {
             let msg = &format!("{}  -  score: {}", "dead", state.score);
             pencil.set_origin(win_size / 2 - Vec2::x(msg.len() / 2));
             pencil.draw_text(msg, Vec2::zero());
-            return;
+            return ();
         }
+        
+        // Draw the ball
         pencil.set_foreground(Color::Yellow);
         pencil.draw_rect(&RectCharset::simple_lines(), 
                         state.ball.position, 
@@ -247,8 +286,6 @@ fn main() {
                                     Vec2::xy(2, 2));
                 }   
             }
-        }
-
-       
+        }       
     });
 }
