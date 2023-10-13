@@ -1,14 +1,20 @@
-use std::char::MAX;
-
 use ruscii::app::{App, State};
 use ruscii::drawing::{Pencil, RectCharset};
 use ruscii::keyboard::{Key, KeyEvent};
 use ruscii::spatial::Vec2;
-use ruscii::terminal::{Color, Window, Style};
+use ruscii::terminal::{Color, Window};
 use array2d::Array2D;
 
 
 const MAX_MISSES : usize = 3;
+
+fn check_hit(item1: &Vec2, item2: &Vec2, dimension: &Vec2) -> bool {
+    if (item1.y < item2.y - 1 && item1.y >= item2.y - 2) && (item1.x >= item2.x - item1.x / 10 && item2.x <= item1.x + dimension.x / 10) {
+        true
+    } else {
+        false
+    }
+}
 
 /*
     PlayerState defines the state of the player's bouncer. 
@@ -32,9 +38,6 @@ impl PlayerState {
     }
 
     pub fn move_x(&mut self) {
-        if self.position.x > 0 && self.position.x < 10 {
-            self.position.x += self.direction;
-        }
         self.position.x += self.direction;
     }
 }
@@ -89,19 +92,13 @@ impl BallState {
 #[derive(Clone)]
 struct BrickState {
     pub position: Vec2,
-    pub alive: bool,
 }
 
 impl BrickState {
     pub fn new(position: Vec2) -> BrickState {
         BrickState {
             position,
-            alive: true,
         }
-    }
-
-    pub fn kill(&mut self) {
-        self.alive = false;
     }
 }
 
@@ -164,20 +161,21 @@ impl GameState {
         self.ball.move_ball();
 
         // 2. Check if the ball hits the bouncer
-        if (self.ball.position.y < self.bouncer.position.y - 1 && self.ball.position.y >= self.bouncer.position.y - 2) 
-            && (self.ball.position.x >= self.bouncer.position.x - self.dimension.x / 10 && self.ball.position.x <= self.bouncer.position.x + self.dimension.x / 10) {
+        if check_hit(&self.ball.position, &self.bouncer.position, &self.dimension) {
             self.ball.bounce_y();
         }
 
         // 3. Check if the ball hits a brick
-        for row in self.bricks.as_rows() {
-            for mut brick in row {
-                if brick.alive && self.ball.position.x == brick.position.x && self.ball.position.y == brick.position.y {
+        for mut row in self.bricks.as_rows() {
+            row.retain(|brick| {
+                if check_hit(&self.ball.position, &brick.position, &self.dimension) {
                     self.ball.bounce_y();
-                    brick.kill();
                     self.score += 1;
+                    false
+                } else {
+                    true
                 }
-            }
+            })
         }
      }
 
@@ -217,8 +215,9 @@ fn main() {
                 Key::D | Key::L | Key::Right    =>  state.bouncer_move_x(relative_speed),
                 _ => (),
             }
-        }
-        state.update();     
+        }    
+
+        state.update();   
 
         // Draw the score
         pencil.set_foreground(Color::Green);
@@ -272,20 +271,16 @@ fn main() {
         
         // Draw the ball
         pencil.set_foreground(Color::Yellow);
-        pencil.draw_rect(&RectCharset::simple_lines(), 
-                        state.ball.position, 
-                        Vec2::xy(2, 2));
+        pencil.draw_char('O', state.ball.position);
 
         // Draw the bricks
-        // pencil.set_style(style::Style::default().background(Color::Black));
         for row in state.bricks.as_rows() {
             for brick in row {
-                if brick.alive { 
-                    pencil.draw_rect(&RectCharset::simple_lines(), 
-                                    brick.position, 
-                                    Vec2::xy(2, 2));
-                }   
+                pencil.draw_rect(&RectCharset::simple_lines(),
+                                brick.position,
+                                Vec2::xy(2, 2));
             }
-        }       
+        }
+        println!("{{state.bricks.as_rows()}}");
     });
 }
