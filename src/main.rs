@@ -134,9 +134,8 @@ impl GameState {
         let mut bricks = Array2D::filled_with(BrickState::new(Vec2::xy(0, 0)),
                                                                     10,
                                                                     8);
-        let mut brick_x_position = 1;
         for y in (1..=16).step_by(2) {
-            brick_x_position = 1;
+            let mut brick_x_position = 1;
             for x in (1..=30).step_by(3) {
                 bricks[(x / 3, y / 2)] = BrickState::new(Vec2::xy(brick_x_position, y));
                 brick_x_position += dimension.x/10;
@@ -189,7 +188,7 @@ impl GameState {
         for mut row in self.bricks.as_rows() {
             row.retain(|brick| {
                 if check_hit(&self.ball.position,
-                            &vec![brick.position, brick.position + Vec2::xy(2,0)],
+                            &vec![brick.position, brick.position + Vec2::xy(self.dimension.x/10,0)],
                            true) {
                     self.ball.bounce_y();
                     self.score += 1;
