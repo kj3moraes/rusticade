@@ -4,16 +4,31 @@ use ruscii::keyboard::{Key, KeyEvent};
 use ruscii::spatial::Vec2;
 use ruscii::terminal::{Color, Window};
 use array2d::Array2D;
-
+use rand::{Rng};
 
 const MAX_MISSES : usize = 3;
 
-fn check_hit(item1: &Vec2, item2: &Vec2, dimension: &Vec2) -> bool {
-    if (item1.y < item2.y - 1 && item1.y >= item2.y - 2) && (item1.x >= item2.x - item1.x / 10 && item2.x <= item1.x + dimension.x / 10) {
-        true
-    } else {
+// Checks if the item in the 2D collides with the surface on the same plane.
+// Here surface is a vector of 2 points indicating the start and the end of the 
+// surface. 
+fn check_hit(item: &Vec2, surface: &Vec<Vec2>, is_vertical: bool) -> bool {
+    if is_vertical {
+        if item.x > surface[0].x && item.x < surface.last().unwrap().x {
+            return (item.y - surface[0].y).abs() <= 1;
+        }
         false
-    }
+    } else {
+        if item.y > surface[0].y && item.y < surface.last().unwrap().y {
+            return (item.x - surface[0].x).abs() <= 1;
+        } 
+        false
+    }   
+}
+
+pub fn random_ball_direction() -> Vec2 {
+    let mut rng = rand::thread_rng();
+    let neg_x: bool = rng.gen();
+    Vec2::xy(if neg_x { -1 } else { 1 }, -1 )
 }
 
 /*
@@ -59,7 +74,7 @@ impl BallState {
     pub fn new(position: Vec2) -> BallState {
         BallState {
             position,
-            direction: Vec2::xy( 1 , -1),
+            direction: random_ball_direction(),
             initial_position: position
         }
     }
@@ -79,7 +94,7 @@ impl BallState {
 
     pub fn reset(&mut self) {
         self.position = self.initial_position.clone();
-        self.direction = Vec2::xy( 1 , -1); 
+        self.direction = random_ball_direction(); 
     }
 }
 
@@ -161,14 +176,18 @@ impl GameState {
         self.ball.move_ball();
 
         // 2. Check if the ball hits the bouncer
-        if check_hit(&self.ball.position, &self.bouncer.position, &self.dimension) {
+        if check_hit(&self.ball.position,
+                    &vec![self.bouncer.position, self.bouncer.position + Vec2::xy(self.dimension.x / 10, 0)],
+                    true) {
             self.ball.bounce_y();
         }
 
         // 3. Check if the ball hits a brick
         for mut row in self.bricks.as_rows() {
             row.retain(|brick| {
-                if check_hit(&self.ball.position, &brick.position, &self.dimension) {
+                if check_hit(&self.ball.position,
+                            &vec![brick.position, brick.position + Vec2::xy(2,0)],
+                           true) {
                     self.ball.bounce_y();
                     self.score += 1;
                     false
@@ -271,7 +290,7 @@ fn main() {
         
         // Draw the ball
         pencil.set_foreground(Color::Yellow);
-        pencil.draw_char('O', state.ball.position);
+        pencil.draw_char('0', state.ball.position);
 
         // Draw the bricks
         for row in state.bricks.as_rows() {

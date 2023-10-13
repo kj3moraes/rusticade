@@ -43,12 +43,7 @@ impl GameState {
         }
     }
 
-    pub fn random_ball_direction() -> Vec2 {
-        let mut rng = rand::thread_rng();
-        let neg_x: bool = rng.gen();
-        let neg_y: bool = rng.gen();
-        Vec2::xy(if neg_x { -1 } else { 1 }, if neg_y { -1 } else { 1 })
-    }
+
 
     pub fn update(&mut self) {
         self.ball_position += self.ball_speed;
