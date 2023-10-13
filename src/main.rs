@@ -3,8 +3,7 @@ use ruscii::drawing::{Pencil, RectCharset};
 use ruscii::keyboard::{Key, KeyEvent};
 use ruscii::spatial::Vec2;
 use ruscii::terminal::{Color, Window};
-use array2d::Array2D;
-use rand::{Rng};
+use rand::*;
 
 const MAX_MISSES : usize = 3;
 
@@ -103,8 +102,7 @@ impl BallState {
     - its current position
     - whether it is alive or not
 */
-
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct BrickState {
     pub position: Vec2,
 }
@@ -120,7 +118,7 @@ impl BrickState {
 struct GameState {
     pub dimension: Vec2,
     pub bouncer: PlayerState,
-    pub bricks: Array2D<BrickState>,
+    pub bricks: Vec<Vec<BrickState>>,
     pub ball: BallState,
     pub score: usize,
 }
@@ -131,22 +129,22 @@ impl GameState {
     pub fn new(dimension: Vec2) -> GameState {
 
         // Create the bricks relative to the size of the window
-        let mut bricks = Array2D::filled_with(BrickState::new(Vec2::xy(0, 0)),
-                                                                    10,
-                                                                    8);
-        for y in (1..=16).step_by(2) {
-            let mut brick_x_position = 1;
-            for x in (1..=30).step_by(3) {
-                bricks[(x / 3, y / 2)] = BrickState::new(Vec2::xy(brick_x_position, y));
-                brick_x_position += dimension.x/10;
+        let mut bricks = vec![vec![BrickState::new(Vec2::xy(0, 0)); 10]; 8];
+        let brick_width = dimension.x / 20;
+        for rows in 0..8 as u32 {
+            for cols in 0..10 as u32 {
+                bricks[rows as usize][cols as usize] = BrickState::new(
+                                    Vec2::xy(rows * 2 * brick_width as u32, 
+                                                        cols * 3));
             }
         }
+
 
         GameState {
             dimension,
             bouncer: PlayerState::new(Vec2::xy(dimension.x / 2, dimension.y - 2)),
-            bricks: bricks,
-            ball: BallState::new(Vec2::xy(dimension.x / 2, dimension.y / 2)),
+            bricks,
+            ball: BallState::new(Vec2::xy(dimension.x / 2, dimension.y)),
             score: 0,
         }
     }
@@ -185,12 +183,13 @@ impl GameState {
         }
 
         // 3. Check if the ball hits a brick
-        for mut row in self.bricks.as_rows() {
+        for row in self.bricks.iter_mut() {
             row.retain(|brick| {
                 if check_hit(&self.ball.position,
                             &vec![brick.position, brick.position + Vec2::xy(self.dimension.x/10,0)],
                            true) {
                     self.ball.bounce_y();
+                    // eprintln!("I hit {:?}", brick);
                     self.score += 1;
                     false
                 } else {
@@ -295,17 +294,19 @@ fn main() {
         pencil.draw_char('0', state.ball.position);
 
         // Draw the bricks
-        for (col_num, row) in state.bricks.as_columns().iter().enumerate() {
-            for brick in row {
-                match col_num {
+        for (row_num, row) in state.bricks.iter().enumerate() {
+            for (col_num, brick) in row.iter().enumerate() {
+                match row_num {
                     0..=1 => pencil.set_foreground(Color::Red),
                     2..=3 => pencil.set_foreground(Color::Xterm(166)),
                     4..=5 => pencil.set_foreground(Color::Green),
                     6..=7 => pencil.set_foreground(Color::Yellow),
                     _ => pencil.set_foreground(Color::DarkGrey),
                 };
+                eprintln!("row_num={row_num}, col_num={col_num}");
+                let brick_st = &state.bricks[col_num][row_num];
                 pencil.draw_rect(&RectCharset::simple_lines(),
-                                brick.position,
+                                Vec2::xy(brick_st.position.x, brick_st.position.y),
                                 Vec2::xy(state.dimension.x / 10, 2));
             }
         }
