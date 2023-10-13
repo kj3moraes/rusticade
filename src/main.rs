@@ -134,9 +134,12 @@ impl GameState {
         let mut bricks = Array2D::filled_with(BrickState::new(Vec2::xy(0, 0)),
                                                                     10,
                                                                     8);
+        let mut brick_x_position = 1;
         for y in (1..=16).step_by(2) {
+            brick_x_position = 1;
             for x in (1..=30).step_by(3) {
-                bricks[(x / 3, y / 2)] = BrickState::new(Vec2::xy(x, y));
+                bricks[(x / 3, y / 2)] = BrickState::new(Vec2::xy(brick_x_position, y));
+                brick_x_position += dimension.x/10;
             }
         }
 
@@ -293,13 +296,19 @@ fn main() {
         pencil.draw_char('0', state.ball.position);
 
         // Draw the bricks
-        for row in state.bricks.as_rows() {
+        for (col_num, row) in state.bricks.as_columns().iter().enumerate() {
             for brick in row {
+                match col_num {
+                    0..=1 => pencil.set_foreground(Color::Red),
+                    2..=3 => pencil.set_foreground(Color::Xterm(166)),
+                    4..=5 => pencil.set_foreground(Color::Green),
+                    6..=7 => pencil.set_foreground(Color::Yellow),
+                    _ => pencil.set_foreground(Color::DarkGrey),
+                };
                 pencil.draw_rect(&RectCharset::simple_lines(),
                                 brick.position,
-                                Vec2::xy(2, 2));
+                                Vec2::xy(state.dimension.x / 10, 2));
             }
         }
-        println!("{{state.bricks.as_rows()}}");
     });
 }
