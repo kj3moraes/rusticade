@@ -135,14 +135,14 @@ impl GameState {
             for cols in 0..10 as u32 {
                 bricks[rows as usize][cols as usize] = BrickState::new(
                                     Vec2::xy(rows * 2 * brick_width as u32, 
-                                                        cols * 3));
+                                                        cols * 2));
             }
         }
 
 
         GameState {
             dimension,
-            bouncer: PlayerState::new(Vec2::xy(dimension.x / 2, dimension.y - 2)),
+            bouncer: PlayerState::new(Vec2::xy(dimension.x / 2 + 10, dimension.y - 2)),
             bricks,
             ball: BallState::new(Vec2::xy(dimension.x / 2, dimension.y)),
             score: 0,
@@ -206,7 +206,7 @@ impl GameState {
 fn main() {
     let mut app = App::default();
     let win_size = app.window().size();
-    let gameplay_dimensions = Vec2::xy(win_size.x * 3/4, win_size.y);
+    let gameplay_dimensions = Vec2::xy(win_size.x, win_size.y);
     let mut state = GameState::new(gameplay_dimensions);
     
     let mut is_game_over : bool = false;
@@ -295,7 +295,7 @@ fn main() {
 
         // Draw the bricks
         for (row_num, row) in state.bricks.iter().enumerate() {
-            for (col_num, brick) in row.iter().enumerate() {
+            for (col_num, _brick) in row.iter().enumerate() {
                 match row_num {
                     0..=1 => pencil.set_foreground(Color::Red),
                     2..=3 => pencil.set_foreground(Color::Xterm(166)),
@@ -304,7 +304,7 @@ fn main() {
                     _ => pencil.set_foreground(Color::DarkGrey),
                 };
                 eprintln!("row_num={row_num}, col_num={col_num}");
-                let brick_st = &state.bricks[col_num][row_num];
+                let brick_st = &state.bricks[row_num][col_num];
                 pencil.draw_rect(&RectCharset::simple_lines(),
                                 Vec2::xy(brick_st.position.x, brick_st.position.y),
                                 Vec2::xy(state.dimension.x / 10, 2));
